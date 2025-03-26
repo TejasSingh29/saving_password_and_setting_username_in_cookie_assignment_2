@@ -3,92 +3,92 @@ const MAX = 999;
 const pinInput = document.getElementById('pin');
 const sha256HashView = document.getElementById('sha256-hash');
 const resultView = document.getElementById('result');
+const checkButton = document.getElementById('check');  // Ensure button reference
 
-// a function to store in the local storage
+// Store in local storage
 function store(key, value) {
   localStorage.setItem(key, value);
 }
 
-// a function to retrieve from the local storage
+// Retrieve from local storage
 function retrieve(key) {
   return localStorage.getItem(key);
 }
 
-function getRandomArbitrary(min, max) {
-  let cached;
-  cached = Math.random() * (max - min) + min;
-  cached = Math.floor(cached);
-  return cached;
+// Generate a random 3-digit number
+function getRandomNumber(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// a function to clear the local storage
-function clear() {
+// Clear local storage
+function clearStorage() {
   localStorage.clear();
 }
 
-// a function to generate sha256 hash of the given string
+// Generate SHA256 hash
 async function sha256(message) {
-  // encode as UTF-8
   const msgBuffer = new TextEncoder().encode(message);
-
-  // hash the message
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-
-  // convert ArrayBuffer to Array
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-
-  // convert bytes to hex string
-  const hashHex = hashArray
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return hashHex;
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Retrieve or generate a SHA256 hash for a random 3-digit number
 async function getSHA256Hash() {
-  let cached = retrieve('sha256');
-  if (cached) {
-    return cached;
-  }
+  let cachedHash = retrieve('sha256');
+  if (cachedHash) return cachedHash;
 
-  cached = await sha256(getRandomArbitrary(MIN, MAX));
-  store('sha256', cached);
-  return cached;
+  const randomNum = getRandomNumber(MIN, MAX).toString();
+  console.log("Generated Number:", randomNum);  // Debugging
+
+  cachedHash = await sha256(randomNum);
+  store('sha256', cachedHash);
+  return cachedHash;
 }
 
+// Main function to display SHA256 hash
 async function main() {
-  sha256HashView.innerHTML = 'Calculating...';
+  sha256HashView.innerHTML = 'Generating Hash...';
   const hash = await getSHA256Hash();
   sha256HashView.innerHTML = hash;
 }
 
+// Function to validate and check the user input
 async function test() {
-  const pin = pinInput.value;
+  console.log("Check button clicked!");
 
-  if (pin.length !== 3) {
-    resultView.innerHTML = '💡 not 3 digits';
+  const pin = pinInput.value.trim();
+  console.log("Entered PIN:", pin);
+
+  if (pin.length !== 3 || isNaN(pin)) {
+    resultView.innerHTML = '💡 Enter a valid 3-digit number!';
     resultView.classList.remove('hidden');
     return;
   }
 
-  const sha256HashView = document.getElementById('sha256-hash');
-  const hasedPin = await sha256(pin);
+  const hashedPin = await sha256(pin);
+  console.log("Hashed PIN:", hashedPin);
 
-  if (hasedPin === sha256HashView.innerHTML) {
-    resultView.innerHTML = '🎉 success';
+  const storedHash = sha256HashView.innerHTML.trim();
+  console.log("Stored Hash:", storedHash);
+
+  if (hashedPin === storedHash) {
+    resultView.innerHTML = '🎉 Success! Correct Guess!';
     resultView.classList.add('success');
   } else {
-    resultView.innerHTML = '❌ failed';
+    resultView.innerHTML = '❌ Incorrect Guess! Try Again.';
   }
+
   resultView.classList.remove('hidden');
 }
 
-// ensure pinInput only accepts numbers and is 3 digits long
+// Ensure input only accepts numbers
 pinInput.addEventListener('input', (e) => {
-  const { value } = e.target;
-  pinInput.value = value.replace(/\D/g, '').slice(0, 3);
+  pinInput.value = e.target.value.replace(/\D/g, '').slice(0, 3);
 });
 
-// attach the test function to the button
-document.getElementById('check').addEventListener('click', test);
-
-main();
+// Attach event listener when DOM loads
+document.addEventListener('DOMContentLoaded', () => {
+  checkButton.addEventListener('click', test);
+  main();
+});
